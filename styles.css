@@ -1,9 +1,3 @@
-/* Estilos base */
-* {
-    box-sizing: border-box;
-    -webkit-tap-highlight-color: transparent;
-}
-
 body {
     margin: 0;
     padding: 0;
@@ -14,25 +8,25 @@ body {
     align-items: center;
     height: 100vh;
     overflow: hidden;
-    background: #111;
-    touch-action: none;
+    background-color: #111;
 }
 
 .game-container {
     position: relative;
-    width: 100vw;
-    height: 100vh;
-    max-width: 800px;
-    max-height: 600px;
+    width: 800px;
+    height: 600px;
     border: 2px solid #444;
     overflow: hidden;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
 .background {
     position: absolute;
     width: 100%;
     height: 100%;
-    background: url('https://images.unsplash.com/photo-1550745165-9bc0b252726f') center/cover;
+    background-image: url('https://images.unsplash.com/photo-1550745165-9bc0b252726f?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80');
+    background-size: cover;
+    background-position: center;
     filter: brightness(0.4);
     z-index: 1;
 }
@@ -40,160 +34,190 @@ body {
 .valid-zone {
     position: absolute;
     bottom: 20px;
-    left: 5%;
-    right: 5%;
-    height: 22%;
-    background: rgba(76, 175, 80, 0.2);
+    left: 50px;
+    right: 50px;
+    height: 150px;
+    background-color: rgba(76, 175, 80, 0.2);
     border: 2px dashed #4CAF50;
-    z-index: 2;
+    z-index: 5;
+    pointer-events: none;
 }
 
 .streamer {
     position: absolute;
-    bottom: 35%;
+    bottom: 200px;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 3;
+    z-index: 10;
 }
 
 .streamer img {
-    width: 50vw;
-    max-width: 300px;
+    width: 300px;
     height: auto;
     border: 3px solid #555;
-    border-radius: 10px;
-    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    border-radius: 5px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
 }
 
 .posters-container {
     position: absolute;
     width: 100%;
     height: 100%;
-    z-index: 4;
+    z-index: 6;
 }
 
 .poster {
     position: absolute;
-    width: 20vw;
-    height: 30vw;
-    max-width: 100px;
-    max-height: 150px;
-    background: #ff6b6b url('./afiche.png') center/cover;
+    width: 100px;
+    height: 150px;
+    background-color: #ff6b6b;
     border: 2px solid #ff4757;
-    border-radius: 8px;
+    border-radius: 5px;
     cursor: grab;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
     user-select: none;
-    touch-action: none;
-    transition: transform 0.1s;
-}
-
-.poster:active {
-    cursor: grabbing;
+    transition: all 0.3s;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    background-image: url('./afiche.png');
+    background-size: cover;
 }
 
 .poster.valid {
-    background-color: #4CAF50;
+    background-color: #4CAF50 !important;
     border-color: #45a049;
 }
 
 .poster.invalid {
-    background-color: #ff0000;
+    background-color: #ff0000 !important;
     animation: shake 0.5s infinite;
 }
 
 @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-3px); }
-    75% { transform: translateX(3px); }
+    0% { transform: translateX(-2px); }
+    25% { transform: translateX(2px); }
+    50% { transform: translateX(-2px); }
+    75% { transform: translateX(2px); }
+    100% { transform: translateX(0); }
 }
 
-/* Interfaz de juego */
 .game-info {
     position: absolute;
     top: 10px;
     left: 10px;
     display: flex;
-    gap: 15px;
-    z-index: 5;
-    font-size: 1.2rem;
+    gap: 20px;
+    z-index: 20;
 }
 
 .game-info div {
-    background: rgba(0,0,0,0.7);
-    padding: 8px 12px;
-    border-radius: 8px;
-}
-
-button {
-    padding: 12px 24px;
-    border: none;
-    border-radius: 8px;
-    font-size: 1.1rem;
-    cursor: pointer;
-    transition: transform 0.2s;
-}
-
-button:active {
-    transform: scale(0.95);
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 18px;
 }
 
 #start-btn {
     position: absolute;
     top: 10px;
-    right: 70px;
-    background: #4CAF50;
+    right: 100px;
+    padding: 8px 16px;
+    background-color: #4CAF50;
     color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    z-index: 20;
+    font-weight: bold;
+}
+
+#start-btn:hover {
+    background-color: #45a049;
 }
 
 #mute-btn {
     position: absolute;
     top: 10px;
     right: 10px;
-    background: #555;
+    padding: 8px 12px;
+    background-color: #555;
     color: white;
-    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    z-index: 20;
+    font-size: 16px;
 }
 
-/* Menús finales */
-.game-over, .win-message {
+#mute-btn:hover {
+    background-color: #666;
+}
+
+.game-over {
     position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0,0,0,0.9);
+    background-color: rgba(0, 0, 0, 0.85);
     display: none;
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    z-index: 30;
     text-align: center;
-    z-index: 10;
 }
 
-.game-over h1, .win-message h1 {
-    font-size: 2.5rem;
+.game-over h1 {
+    color: #ff4757;
+    font-size: 48px;
     margin-bottom: 20px;
+    text-shadow: 0 0 10px rgba(255, 71, 87, 0.7);
 }
 
-/* Responsive para móviles */
-@media (max-width: 600px) {
-    .poster {
-        width: 25vw;
-        height: 35vw;
-    }
-    
-    .streamer {
-        bottom: 40%;
-    }
-    
-    .game-info {
-        font-size: 1rem;
-    }
-    
-    button {
-        padding: 10px 20px;
-        font-size: 1rem;
-    }
-    
-    #start-btn {
-        right: 60px;
-    }
+.win-message {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85);
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 30;
+    text-align: center;
+}
+
+.win-message h1 {
+    color: #4CAF50;
+    font-size: 48px;
+    margin-bottom: 20px;
+    text-shadow: 0 0 10px rgba(76, 175, 80, 0.7);
+}
+
+.win-message p {
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+
+#restart-btn, #win-restart-btn {
+    padding: 12px 24px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 18px;
+    margin-top: 20px;
+    font-weight: bold;
+}
+
+#restart-btn:hover, #win-restart-btn:hover {
+    background-color: #45a049;
+    transform: scale(1.05);
+    transition: transform 0.2s;
 }

@@ -4,232 +4,203 @@ document.addEventListener('DOMContentLoaded', () => {
     const timeElement = document.getElementById('time');
     const livesElement = document.getElementById('lives');
     const gameOverScreen = document.getElementById('game-over');
-    const winMessage = document.getElementById('win-message');
+    const restartBtn = document.getElementById('restart-btn');
     const muteBtn = document.getElementById('mute-btn');
     const gameMusic = document.getElementById('game-music');
+    const winMessage = document.getElementById('win-message');
+    const winRestartBtn = document.getElementById('win-restart-btn');
+    
+    const VALID_ZONE = {
+        left: 50,
+        right: 750,
+        top: 430,
+        bottom: 580
+    };
+    
+    const STREAMER_AREA = {
+        left: 250,
+        right: 550,
+        top: 200,
+        bottom: 400
+    };
     
     let timeLeft = 30;
     let lives = 3;
     let gameInterval;
+    let posterCheckInterval;
+    let timeInterval;
     let posters = [];
-    let isDragging = false;
-    let currentPoster = null;
-    let touchId = null;
-
-    // Configuración inicial
-    const VALID_ZONE = {
-        left: 0.05,  // 5% del ancho
-        right: 0.95, // 95% del ancho
-        top: 0.72,   // 72% de la altura
-        bottom: 0.95 // 95% de la altura
-    };
-
-    const STREAMER_ZONE = {
-        left: 0.3,
-        right: 0.7,
-        top: 0.3,
-        bottom: 0.6
-    };
-
-    // Funciones de control
-    function getGameRect() {
-        const gameContainer = document.querySelector('.game-container');
-        return gameContainer.getBoundingClientRect();
-    }
-
-    function createPoster() {
+    let gameActive = false;
+    let isMuted = false;
+    
+    const createPoster = () => {
         const poster = document.createElement('div');
         poster.className = 'poster';
         
-        // Posición inicial aleatoria
-        const gameRect = getGameRect();
-        poster.style.left = `${Math.random() * (gameRect.width - 100)}px`;
-        poster.style.top = `${Math.random() * (gameRect.height * 0.4)}px`;
+        // Posición inicial aleatoria segura
+        let x, y;
+        do {
+            x = Math.random() * 600;
+            y = Math.random() * 300;
+        } while (
+            (x > STREAMER_AREA.left - 100 && x < STREAMER_AREA.right) ||
+            (y > STREAMER_AREA.top - 100 && y < STREAMER_AREA.bottom)
+        );
         
-        addDragEvents(poster);
+        poster.style.left = `${x}px`;
+        poster.style.top = `${y}px`;
+        
+        let isDragging = false;
+        let offsetX, offsetY;
+        
+        const updatePosterState = () => {
+            const rect = poster.getBoundingClientRect();
+            
+            // 1. Verificar si está en zona válida
+            const inValidZone = 
+                rect.left >= VALID_ZONE.left &&
+                rect.right <= VALID_ZONE.right &&
+                rect.top >= VALID_ZONE.top &&
+                rect.bottom <= VALID_ZONE.bottom;
+            
+            // 2. Verificar superposición solo en zona válida
+            let overlapping = false;
+            if (inValidZone) {
+                overlapping = posters.some(p => 
+                    p !== poster && 
+                    rect.left < p.getBoundingClientRect().right &&
+                    rect.right > p.getBoundingClientRect().left &&
+                    rect.top < p.getBoundingClientRect().bottom &&
+                    rect.bottom > p.getBoundingClientRect().top
+                );
+            }
+            
+            // 3. Verificar si cubre al streamer
+            const coveringStreamer = 
+                rect.left < STREAMER_AREA.right &&
+                rect.right > STREAMER_AREA.left &&
+                rect.top < STREAMER_AREA.bottom &&
+                rect.bottom > STREAMER_AREA.top;
+            
+            // Actualizar clases
+            poster.classList.toggle('valid', inValidZone && !overlapping);
+            poster.classList.toggle('invalid', (inValidZone && overlapping) || coveringStreamer);
+        };
+        
+        poster.addEventListener('mousedown', (e) => {
+            if (!gameActive) return;
+            isDragging = true;
+            offsetX = e.clientX - poster.getBoundingClientRect().left;
+            offsetY = e.clientY - poster.getBoundingClientRect().top;
+            poster.style.cursor = 'grabbing';
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging || !gameActive) return;
+            
+            const x = e.clientX - offsetX;
+            const y = e.clientY - offsetY;
+            
+            poster.style.left = `${x}px`;
+            poster.style.top = `${y}px`;
+            updatePosterState();
+        });
+        
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            if (gameActive) poster.style.cursor = 'grab';
+            updatePosterState();
+            
+            // Perder vida solo si está en estado inválido al soltar
+            if (poster.classList.contains('invalid')) {
+                loseLife();
+            }
+        });
+        
         postersContainer.appendChild(poster);
         posters.push(poster);
-    }
-
-    function addDragEvents(poster) {
-        const handleMove = (x, y) => {
-            const gameRect = getGameRect();
-            const newX = x - gameRect.left - 50; // Centrar en el dedo/cursor
-            const newY = y - gameRect.top - 75;
-            
-            poster.style.left = `${Math.max(0, Math.min(newX, gameRect.width - 100))}px`;
-            poster.style.top = `${Math.max(0, Math.min(newY, gameRect.height - 150))}px`;
-            checkPosterState(poster);
-        };
-
-        // Eventos táctiles
-        poster.addEventListener('touchstart', (e) => {
-            if (!isDragging) {
-                isDragging = true;
-                touchId = e.changedTouches[0].identifier;
-                const touch = e.changedTouches[0];
-                handleMove(touch.clientX, touch.clientY);
-            }
-        }, { passive: false });
-
-        poster.addEventListener('touchmove', (e) => {
-            if (isDragging) {
-                const touch = Array.from(e.changedTouches).find(t => t.identifier === touchId);
-                if (touch) {
-                    e.preventDefault();
-                    handleMove(touch.clientX, touch.clientY);
-                }
-            }
-        }, { passive: false });
-
-        poster.addEventListener('touchend', () => {
-            isDragging = false;
-            touchId = null;
-            checkPosterState(poster, true);
-        });
-
-        // Eventos de ratón
-        poster.addEventListener('mousedown', (e) => {
-            isDragging = true;
-            handleMove(e.clientX, e.clientY);
-            document.addEventListener('mousemove', mouseMove);
-        });
-
-        const mouseMove = (e) => {
-            if (isDragging) {
-                handleMove(e.clientX, e.clientY);
-            }
-        };
-
-        document.addEventListener('mouseup', () => {
-            if (isDragging) {
-                isDragging = false;
-                document.removeEventListener('mousemove', mouseMove);
-                checkPosterState(poster, true);
-            }
-        });
-    }
-
-    function checkPosterState(poster, finalCheck = false) {
-        const gameRect = getGameRect();
-        const posterRect = poster.getBoundingClientRect();
-        
-        // Conversión a porcentajes
-        const posterLeft = (posterRect.left - gameRect.left) / gameRect.width;
-        const posterRight = (posterRect.right - gameRect.left) / gameRect.width;
-        const posterTop = (posterRect.top - gameRect.top) / gameRect.height;
-        const posterBottom = (posterRect.bottom - gameRect.top) / gameRect.height;
-
-        // Verificar zona válida
-        const inValidZone = posterLeft >= VALID_ZONE.left &&
-                          posterRight <= VALID_ZONE.right &&
-                          posterTop >= VALID_ZONE.top &&
-                          posterBottom <= VALID_ZONE.bottom;
-
-        // Verificar streamer
-        const inStreamerZone = posterLeft < STREAMER_ZONE.right &&
-                              posterRight > STREAMER_ZONE.left &&
-                              posterTop < STREAMER_ZONE.bottom &&
-                              posterBottom > STREAMER_ZONE.top;
-
-        // Verificar superposición
-        let overlapping = false;
-        if (inValidZone) {
-            overlapping = posters.some(p => 
-                p !== poster && 
-                checkCollision(posterRect, p.getBoundingClientRect())
-            );
-        }
-
-        // Actualizar clases
-        poster.classList.toggle('valid', inValidZone && !overlapping);
-        poster.classList.toggle('invalid', inValidZone && overlapping || inStreamerZone);
-
-        // Penalización final
-        if (finalCheck && (overlapping || inStreamerZone)) {
-            loseLife();
-        }
-    }
-
-    function checkCollision(rect1, rect2) {
-        return !(rect1.right < rect2.left || 
-               rect1.left > rect2.right || 
-               rect1.bottom < rect2.top || 
-               rect1.top > rect2.bottom);
-    }
-
-    function loseLife() {
+    };
+    
+    const loseLife = () => {
         lives--;
         livesElement.textContent = lives;
-        if (lives <= 0) showGameOver();
-    }
-
-    function showGameOver() {
-        gameOverScreen.style.display = 'flex';
-        stopGame();
-    }
-
-    function showWin() {
-        winMessage.style.display = 'flex';
-        stopGame();
-    }
-
-    function stopGame() {
+        
+        if (lives <= 0) {
+            showGameOver();
+        }
+    };
+    
+    const checkWinCondition = () => {
+        return posters.every(poster => {
+            return poster.classList.contains('valid') && 
+                 !poster.classList.contains('invalid');
+        });
+    };
+    
+    const updateTimer = () => {
+        timeLeft--;
+        timeElement.textContent = timeLeft;
+        
+        if (timeLeft <= 0) {
+            checkWinCondition() ? showWinMessage() : showGameOver();
+        }
+    };
+    
+    const showGameOver = () => {
+        gameActive = false;
         clearInterval(gameInterval);
+        clearInterval(timeInterval);
+        gameOverScreen.style.display = 'flex';
         gameMusic.pause();
-    }
-
-    function startGame() {
-        // Resetear juego
+    };
+    
+    const showWinMessage = () => {
+        gameActive = false;
+        clearInterval(gameInterval);
+        clearInterval(timeInterval);
+        winMessage.style.display = 'flex';
+        gameMusic.pause();
+    };
+    
+    const startGame = () => {
+        gameActive = true;
         timeLeft = 30;
         lives = 3;
-        posters.forEach(p => p.remove());
+        timeElement.textContent = timeLeft;
+        livesElement.textContent = lives;
+        
+        posters.forEach(poster => poster.remove());
         posters = [];
         gameOverScreen.style.display = 'none';
         winMessage.style.display = 'none';
-        timeElement.textContent = timeLeft;
-        livesElement.textContent = lives;
-
-        // Iniciar música
+        
         gameMusic.currentTime = 0;
         gameMusic.play();
-
-        // Temporizador
-        const timer = setInterval(() => {
-            timeLeft--;
-            timeElement.textContent = timeLeft;
-            
-            if (timeLeft <= 0) {
-                clearInterval(timer);
-                checkWinCondition() ? showWin() : showGameOver();
-            }
-        }, 1000);
-
-        // Generar afiches
+        
+        // Crear 6 afiches iniciales
+        for (let i = 0; i < 6; i++) {
+            createPoster();
+        }
+        
+        // Nuevo afiche cada 2 segundos
         gameInterval = setInterval(() => {
-            if (posters.length < 8) createPoster();
+            if (posters.length < 10) {
+                createPoster();
+            }
         }, 2000);
-    }
-
-    function checkWinCondition() {
-        return posters.every(p => 
-            p.classList.contains('valid') && 
-            !p.classList.contains('invalid')
-        );
-    }
-
-    // Eventos
+        
+        timeInterval = setInterval(updateTimer, 1000);
+    };
+    
     startBtn.addEventListener('click', startGame);
-    document.getElementById('restart-btn').addEventListener('click', startGame);
-    document.getElementById('win-restart-btn').addEventListener('click', startGame);
+    restartBtn.addEventListener('click', startGame);
+    winRestartBtn.addEventListener('click', startGame);
     
     muteBtn.addEventListener('click', () => {
-        gameMusic.muted = !gameMusic.muted;
-        muteBtn.textContent = gameMusic.muted ? '🔇' : '🔊';
+        isMuted = !isMuted;
+        gameMusic.muted = isMuted;
+        muteBtn.textContent = isMuted ? '🔇' : '🔊';
     });
-
-    // Iniciar en móviles
-    if ('ontouchstart' in window) {
-        document.body.classList.add('touch-device');
-    }
+    
+    gameMusic.load();
 });
