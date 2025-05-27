@@ -27,9 +27,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const calculateZones = () => {
         containerRect = postersContainer.getBoundingClientRect();
         VALID_ZONE = {
-            left: containerRect.width * 0.1,
-            right: containerRect.width * 0.9,
-            top: containerRect.height * 0.7,
+            left: containerRect.width * 0.05,
+            right: containerRect.width * 0.95,
+            top: containerRect.height * 0.5,
             bottom: containerRect.height,
         };
         
@@ -238,16 +238,16 @@ document.addEventListener('DOMContentLoaded', () => {
         gameMusic.play().catch(e => console.log("Error de audio:", e));
         
         // Crear 6 afiches iniciales
-        for (let i = 0; i < 6; i++) {
+        for (let i = 0; i < 3; i++) {
             createPoster();
         }
         
         // Nuevo afiche cada 2 segundos
         gameInterval = setInterval(() => {
-            if (posters.length < 10) {
+            if (posters.length < 5) {
                 createPoster();
             }
-        }, 2000);
+        }, 3000);
         
         timeInterval = setInterval(updateTimer, 1000);
     };
