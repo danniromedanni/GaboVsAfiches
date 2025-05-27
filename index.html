@@ -2,40 +2,41 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Organiza los Afiches</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="game-container">
         <div class="background"></div>
-        <div class="streamer" id="streamer">
+        <div class="streamer">
             <img src="./gabo.png" alt="Streamer Gabo">
         </div>
         <div class="valid-zone"></div>
         <div class="posters-container" id="posters-container"></div>
+        
         <div class="game-info">
-            <div class="time-left">Tiempo: <span id="time">30</span>s</div>
-            <div class="lives">Intentos: <span id="lives">3</span></div>
+            <div class="time-left">⏳ <span id="time">30</span>s</div>
+            <div class="lives">❤️ <span id="lives">3</span></div>
         </div>
-        <button id="start-btn">Comenzar Juego</button>
+        
+        <button id="start-btn">Comenzar</button>
         <button id="mute-btn">🔊</button>
         
         <div class="game-over" id="game-over">
-            <h1>GAME OVER</h1>
+            <h1>😭 GAME OVER</h1>
             <p>¡Eres tan malo como Gabo!</p>
             <button id="restart-btn">Reintentar</button>
         </div>
         
         <div class="win-message" id="win-message">
-            <h1>¡Perfecto!</h1>
-            <p>Lograste organizar los afiches</p>
+            <h1>🎉 ¡Perfecto!</h1>
+            <p>Ayudaste a Gabo</p>
             <button id="win-restart-btn">Jugar otra vez</button>
         </div>
         
         <audio id="game-music" loop>
             <source src="./8BIT TEMA.mp3" type="audio/mpeg">
-            Tu navegador no soporta el elemento de audio.
         </audio>
     </div>
     <script src="script.js"></script>
