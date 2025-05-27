@@ -27,9 +27,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const calculateZones = () => {
         containerRect = postersContainer.getBoundingClientRect();
         VALID_ZONE = {
-            left: containerRect.width * 0.05,
-            right: containerRect.width * 0.95,
-            top: containerRect.height * 0.5,
+            left: containerRect.width * 0.02,
+            right: containerRect.width * 0.98,
+            top: containerRect.height * 0.3,
             bottom: containerRect.height,
         };
         
