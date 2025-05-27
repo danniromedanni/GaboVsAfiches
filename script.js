@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Elementos del DOM
     const postersContainer = document.getElementById('posters-container');
     const startBtn = document.getElementById('start-btn');
     const timeElement = document.getElementById('time');
@@ -10,117 +11,173 @@ document.addEventListener('DOMContentLoaded', () => {
     const winMessage = document.getElementById('win-message');
     const winRestartBtn = document.getElementById('win-restart-btn');
     
-    const VALID_ZONE = {
-        left: 50,
-        right: 750,
-        top: 430,
-        bottom: 580
-    };
-    
-    const STREAMER_AREA = {
-        left: 250,
-        right: 550,
-        top: 200,
-        bottom: 400
-    };
-    
+    // Variables de juego
+    let VALID_ZONE = {};
+    let STREAMER_AREA = {};
     let timeLeft = 30;
     let lives = 3;
     let gameInterval;
-    let posterCheckInterval;
     let timeInterval;
     let posters = [];
     let gameActive = false;
     let isMuted = false;
-    
+    let containerRect;
+
+    // Configurar zonas dinámicas
+    const calculateZones = () => {
+        containerRect = postersContainer.getBoundingClientRect();
+        VALID_ZONE = {
+            left: containerRect.width * 0.1,
+            right: containerRect.width * 0.9,
+            top: containerRect.height * 0.7,
+            bottom: containerRect.height,
+        };
+        
+        STREAMER_AREA = {
+            left: containerRect.width * 0.3,
+            right: containerRect.width * 0.7,
+            top: containerRect.height * 0.2,
+            bottom: containerRect.height * 0.5,
+        };
+    };
+
+    // Crear póster
     const createPoster = () => {
         const poster = document.createElement('div');
         poster.className = 'poster';
+        postersContainer.appendChild(poster);
+
+        // Tamaño responsive del póster
+        const posterSize = Math.min(containerRect.width * 0.15, 150);
+        poster.style.width = `${posterSize}px`;
+        poster.style.height = `${posterSize * 1.33}px`;
+
+        calculateZones();
         
-        // Posición inicial aleatoria segura
-        let x, y;
+        // Posicionamiento inicial seguro
+        let x, y, isValidPosition;
         do {
-            x = Math.random() * 600;
-            y = Math.random() * 300;
-        } while (
-            (x > STREAMER_AREA.left - 100 && x < STREAMER_AREA.right) ||
-            (y > STREAMER_AREA.top - 100 && y < STREAMER_AREA.bottom)
-        );
-        
+            x = Math.random() * (containerRect.width - posterSize);
+            y = Math.random() * (containerRect.height - posterSize);
+            
+            isValidPosition = !(
+                x + posterSize > STREAMER_AREA.left && 
+                x < STREAMER_AREA.right &&
+                y + posterSize > STREAMER_AREA.top && 
+                y < STREAMER_AREA.bottom
+            );
+        } while (!isValidPosition);
+
         poster.style.left = `${x}px`;
         poster.style.top = `${y}px`;
-        
+
+        // Manejo de eventos
         let isDragging = false;
         let offsetX, offsetY;
-        
-        const updatePosterState = () => {
-            const rect = poster.getBoundingClientRect();
-            
-            // 1. Verificar si está en zona válida
-            const inValidZone = 
-                rect.left >= VALID_ZONE.left &&
-                rect.right <= VALID_ZONE.right &&
-                rect.top >= VALID_ZONE.top &&
-                rect.bottom <= VALID_ZONE.bottom;
-            
-            // 2. Verificar superposición solo en zona válida
-            let overlapping = false;
-            if (inValidZone) {
-                overlapping = posters.some(p => 
-                    p !== poster && 
-                    rect.left < p.getBoundingClientRect().right &&
-                    rect.right > p.getBoundingClientRect().left &&
-                    rect.top < p.getBoundingClientRect().bottom &&
-                    rect.bottom > p.getBoundingClientRect().top
-                );
-            }
-            
-            // 3. Verificar si cubre al streamer
-            const coveringStreamer = 
-                rect.left < STREAMER_AREA.right &&
-                rect.right > STREAMER_AREA.left &&
-                rect.top < STREAMER_AREA.bottom &&
-                rect.bottom > STREAMER_AREA.top;
-            
-            // Actualizar clases
-            poster.classList.toggle('valid', inValidZone && !overlapping);
-            poster.classList.toggle('invalid', (inValidZone && overlapping) || coveringStreamer);
-        };
-        
-        poster.addEventListener('mousedown', (e) => {
+
+        const startDrag = (clientX, clientY) => {
             if (!gameActive) return;
             isDragging = true;
-            offsetX = e.clientX - poster.getBoundingClientRect().left;
-            offsetY = e.clientY - poster.getBoundingClientRect().top;
-            poster.style.cursor = 'grabbing';
+            const rect = poster.getBoundingClientRect();
+            offsetX = clientX - rect.left;
+            offsetY = clientY - rect.top;
+            poster.style.zIndex = '100'; // Traer al frente al arrastrar
+        };
+
+        // Eventos táctiles
+        poster.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            startDrag(e.touches[0].clientX, e.touches[0].clientY);
         });
-        
-        document.addEventListener('mousemove', (e) => {
+
+        // Eventos de ratón
+        poster.addEventListener('mousedown', (e) => {
+            startDrag(e.clientX, e.clientY);
+        });
+
+        // Mover
+        const moveHandler = (e) => {
             if (!isDragging || !gameActive) return;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
             
-            const x = e.clientX - offsetX;
-            const y = e.clientY - offsetY;
+            const x = clientX - containerRect.left - offsetX;
+            const y = clientY - containerRect.top - offsetY;
             
-            poster.style.left = `${x}px`;
-            poster.style.top = `${y}px`;
-            updatePosterState();
-        });
-        
-        document.addEventListener('mouseup', () => {
+            // Limitar movimientos a los bordes del contenedor
+            const maxX = containerRect.width - poster.offsetWidth;
+            const maxY = containerRect.height - poster.offsetHeight;
+            
+            poster.style.left = `${Math.max(0, Math.min(x, maxX))}px`;
+            poster.style.top = `${Math.max(0, Math.min(y, maxY))}px`;
+            
+            updatePosterState(poster);
+        };
+
+        document.addEventListener('mousemove', moveHandler);
+        document.addEventListener('touchmove', moveHandler, { passive: false });
+
+        // Finalizar arrastre
+        const endDrag = () => {
+            if (!isDragging) return;
             isDragging = false;
-            if (gameActive) poster.style.cursor = 'grab';
-            updatePosterState();
+            poster.style.zIndex = '1'; // Restaurar z-index
+            updatePosterState(poster);
             
-            // Perder vida solo si está en estado inválido al soltar
+            // Solo perder vida si está en estado inválido al soltar
             if (poster.classList.contains('invalid')) {
                 loseLife();
             }
-        });
-        
-        postersContainer.appendChild(poster);
+        };
+
+        document.addEventListener('mouseup', endDrag);
+        document.addEventListener('touchend', endDrag);
+
         posters.push(poster);
     };
-    
+
+    // Actualizar estado del póster
+    const updatePosterState = (poster) => {
+        const rect = poster.getBoundingClientRect();
+        
+        // Coordenadas relativas al contenedor
+        const relLeft = rect.left - containerRect.left;
+        const relTop = rect.top - containerRect.top;
+        const relRight = relLeft + rect.width;
+        const relBottom = relTop + rect.height;
+
+        // Validar zona
+        const inValidZone = 
+            relLeft >= VALID_ZONE.left &&
+            relRight <= VALID_ZONE.right &&
+            relTop >= VALID_ZONE.top &&
+            relBottom <= VALID_ZONE.bottom;
+
+        // Verificar superposición
+        let overlapping = false;
+        if (inValidZone) {
+            overlapping = posters.some(p => 
+                p !== poster &&
+                p.classList.contains('valid') &&
+                relLeft < (p.offsetLeft + p.offsetWidth) &&
+                relRight > p.offsetLeft &&
+                relTop < (p.offsetTop + p.offsetHeight) &&
+                relBottom > p.offsetTop
+            );
+        }
+
+        // Verificar streamer
+        const coveringStreamer = 
+            relLeft < STREAMER_AREA.right &&
+            relRight > STREAMER_AREA.left &&
+            relTop < STREAMER_AREA.bottom &&
+            relBottom > STREAMER_AREA.top;
+
+        poster.classList.toggle('valid', inValidZone && !overlapping);
+        poster.classList.toggle('invalid', (inValidZone && overlapping) || coveringStreamer);
+    };
+
+    // Resto de funciones del juego
     const loseLife = () => {
         lives--;
         livesElement.textContent = lives;
@@ -174,8 +231,11 @@ document.addEventListener('DOMContentLoaded', () => {
         gameOverScreen.style.display = 'none';
         winMessage.style.display = 'none';
         
+        calculateZones(); // Calcular zonas al inicio
+        
+        // Reproducir música con manejo de errores
         gameMusic.currentTime = 0;
-        gameMusic.play();
+        gameMusic.play().catch(e => console.log("Error de audio:", e));
         
         // Crear 6 afiches iniciales
         for (let i = 0; i < 6; i++) {
@@ -192,6 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
         timeInterval = setInterval(updateTimer, 1000);
     };
     
+    // Event listeners
     startBtn.addEventListener('click', startGame);
     restartBtn.addEventListener('click', startGame);
     winRestartBtn.addEventListener('click', startGame);
@@ -202,5 +263,8 @@ document.addEventListener('DOMContentLoaded', () => {
         muteBtn.textContent = isMuted ? '🔇' : '🔊';
     });
     
+    // Inicialización
+    calculateZones();
+    window.addEventListener('resize', calculateZones);
     gameMusic.load();
 });
